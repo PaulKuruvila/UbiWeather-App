@@ -12,9 +12,8 @@ root.geometry("1050x900")
 root.maxsize(height=1150,width=1050)
 root.minsize(height=900,width=1050)
 
-button_location = 1010
-searchButtonx = 686
 def resizeWindow(e):
+    global searchButtonx, button_location
     dif = e.width-button_location
     if dif<40:
         change_in_x = 686-((40-dif)/2)
@@ -58,38 +57,73 @@ def readBar(e):
         # check if there are any suggestions
         #if :
 
+def switchDegreesUnit(e):
+    global alternateUnit, temp, temp_high, temp_low, c_tempdisplay, h_tempdisplay, l_tempdisplay
+    print("altUnit value = "+alternateUnit)
+    maincanvas.delete(c_tempdisplay)
+    maincanvas.delete(h_tempdisplay)
+    maincanvas.delete(l_tempdisplay)
+    temp_value = int(temp[0:len(temp)-2])
+    htemp_value = int(temp_high[0:len(temp_high)-2])
+    ltemp_value = int(temp_low[0:len(temp_low)-2])
+    if alternateUnit == "F":
+        FahrenLabel.pack_forget()
+        CelsiusLabel.pack()
+        temp = str(round((temp_value*1.8)+32))+"°"+alternateUnit
+        temp_high = str(round((htemp_value*1.8)+32))+"°"+alternateUnit
+        temp_low = str(round((ltemp_value*1.8)+32))+"°"+alternateUnit
+        alternateUnit = "C"
+    else:
+        CelsiusLabel.pack_forget()
+        FahrenLabel.pack()
+        temp = str(round((temp_value-32)*.5556))+"°"+alternateUnit
+        temp_high = str(round((htemp_value-32)*.5556))+"°"+alternateUnit
+        temp_low = str(round((ltemp_value-32)*.5556))+"°"+alternateUnit
+        alternateUnit = "F"
+    c_tempdisplay = maincanvas.create_text(450,230,text=temp, font=("Calibri", 36))
+    h_tempdisplay = maincanvas.create_text(750,230,text=temp_high, font=("Calibri", 36))
+    l_tempdisplay = maincanvas.create_text(600,230,text=temp_low, font=("Calibri", 36))
+
 def displayData(e, num_descr, _data):
     maincanvas.pack_forget()
+    description = _data[0][0]
+    icon = _data[1][0]
+    global temp, temp_high, temp_low
+    _city = _data[2]
+    _location = _data[3]
+    if(_data[4]):
+        temp += 'C'
+        temp_high += "C"
+        temp_low += "C"
+    else:
+        temp += "F"
+        temp_high += "F"
+        temp_low += "F"
+    weatherIcon = PhotoImage(file="weather icons/{}.png".format(icon))
+    weatherIconLabel = Label(image=weatherIcon)
+    weatherIconLabel.image = weatherIcon
     if num_descr == 1:
-        description = _data[0]
-        icon = _data[1]
-        _city = _data[2]
-        _location = _data[3]
-        _temp = str(round(_data[4]))+"°"
-        _temp_high = str(round(_data[5]))+"°"
-        _temp_low = str(round(_data[6]))+"°"
-        print("description = "+description)
-        print("icon = "+icon)
-        print("city = "+_city)
-        print("location = "+_location)
-        print("temp = "+str(_temp))
-        print("temp high = "+str(_temp_high))
-        print("temp low = "+str(_temp_low))
-        #maincanvas.create_polygon(create_section(100, 45, 700, 500,r=100),fill="#E9ede9",smooth=True)
         maincanvas.create_polygon(getPolygonPoints(150, 45, 900, 650,r=100),fill="#E9ede9",smooth=True)
         maincanvas.create_text(525,100,text=_city, font=("Calibri", 28))
-        weatherIcon = PhotoImage(file="weather icons/{}.png".format(icon))
-        weatherIconLabel = Label(image=weatherIcon)
-        weatherIconLabel.image = weatherIcon
         maincanvas.create_image(300,200,image=weatherIcon)
         maincanvas.create_text(450,170,text="Current", font=("Calibri", 20))
-        maincanvas.create_text(450,230,text=_temp, font=("Calibri", 36))
-        maincanvas.create_text(600,170,text="High", font=("Calibri", 20))
-        maincanvas.create_text(600,230,text=_temp_high, font=("Calibri", 36))
-        maincanvas.create_text(750,170,text="Low", font=("Calibri", 20))
-        maincanvas.create_text(750,230,text=_temp_low, font=("Calibri", 36))
+        maincanvas.create_text(450,230,text=temp, font=("Calibri", 36))
+        maincanvas.create_text(750,170,text="High", font=("Calibri", 20))
+        maincanvas.create_text(750,230,text=temp_high, font=("Calibri", 36))
+        maincanvas.create_text(600,170,text="Low", font=("Calibri", 20))
+        maincanvas.create_text(600,230,text=temp_low, font=("Calibri", 36))
+        maincanvas.create_text(800,75,text=_location, font=("Calibri", 10))
         maincanvas.pack()
-
+    elif num_descr == 2:
+        description2 = _data[0][1]
+        icon2 = _data[1][1]
+        maincanvas.create_polygon(getPolygonPoints(50, 50, 500, 650,r=100),fill="#E9ede9",smooth=True)
+        maincanvas.create_polygon(getPolygonPoints(550, 50, 1000, 650,r=100),fill="#E9ede9",smooth=True)
+        maincanvas.pack()
+    else:
+        print("Unexpected error; Invalid values received")
+        return
+    
 def searchCity(e):
     city_entered = searchBar.get();
     if city_entered == '':
@@ -106,17 +140,20 @@ def searchCity(e):
         print("Invalid city name")
         NoResults = maincanvas.create_text(525,105,justify='center',text="City not found.\nMake sure you only enter the city's name.\n(e.g. Abu Dhabi)", font=("Calibri", 18))
         return
+    is_metric = TRUE
     if country_code == "US" or country_code == "LR" or country_code == "MM":
         url+="&units=imperial"
+        is_metric = FALSE
     else:
         url+="&units=metric"
     weather_data = requests.get(url).json()
     # get all key weather info and create empty lists for storing weather descriptions and their respective weather icons (this is for cases where there may be more than one weather description)
     city = weather_data['name']+", "+countrycodes[country_code]
     location = "("+str(weather_data['coord']['lat'])+"°, "+str(weather_data['coord']['lon'])+"°)"
-    temp = weather_data['main']['temp']
-    temp_high = weather_data['main']['temp_max']
-    temp_low = weather_data['main']['temp_min']
+    global temp, temp_high, temp_low
+    temp = str(round(weather_data['main']['temp']))+"°"
+    temp_high = str(round(weather_data['main']['temp_max']))+"°"
+    temp_low = str(round(weather_data['main']['temp_min']))+"°"
     weather = weather_data['weather']
     weather_descriptions = []
     weather_icons = []
@@ -128,7 +165,7 @@ def searchCity(e):
     print(weather_descriptions)
     print(weather_icons)
     pprint(weather_data)
-    data_to_display = [weather_descriptions[0],weather_icons[0],city,location,temp,temp_high,temp_low]
+    data_to_display = [weather_descriptions,weather_icons,city,location,is_metric]
     displayData(e, num_descriptions, data_to_display)
 
 def listSelect(e):
@@ -159,6 +196,8 @@ searchBar.bind("<KeyRelease>", readBar)
 # Search Button
 searchButton = tk.Button(root, height=1,width=15,relief="flat",font=('Calibri',15),text="Search", cursor="hand2", bg="#Bec0be")
 searchButton.place(x=686,y=132)
+button_location = 1010
+searchButtonx = 686
 searchButton.bind("<ButtonRelease>", searchCity)
 # Main canvas
 maincanvas = tk.Canvas(root, height = 1050, width = 2555, bg = "#F6f7f6",bd=-2)
@@ -166,14 +205,27 @@ maincanvas.create_polygon(getPolygonPoints(150, 45, 900, 650,r=100),fill="#E9ede
 maincanvas.create_text(525,100,text="Sugar Land, United States", font=("Calibri", 28))
 sugarland_weather = requests.get("http://api.openweathermap.org/data/2.5/weather?q=Sugar+Land&appid=233fb10f061739fe6ced65c5f60ec5da&units=imperial").json()
 sl_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_weather['weather'][0]['icon']))
+temp = str(round(sugarland_weather['main']['temp']))+"°F"
+temp_high = str(round(sugarland_weather['main']['temp_max']))+"°F"
+temp_low = str(round(sugarland_weather['main']['temp_min']))+"°F"
 maincanvas.create_image(300,200,image=sl_IconImage)
-maincanvas.create_text(450,170,text="Current", font=("Calibri", 20))
-maincanvas.create_text(450,230,text=str(round(sugarland_weather['main']['temp']))+"°", font=("Calibri", 36))
-maincanvas.create_text(600,170,text="High", font=("Calibri", 20))
-maincanvas.create_text(600,230,text=str(round(sugarland_weather['main']['temp_max']))+"°", font=("Calibri", 36))
-maincanvas.create_text(750,170,text="Low", font=("Calibri", 20))
-maincanvas.create_text(750,230,text=str(round(sugarland_weather['main']['temp_min']))+"°", font=("Calibri", 36))
+c_templabel = maincanvas.create_text(450,170,text="Current", font=("Calibri", 20))
+c_tempdisplay = maincanvas.create_text(450,230,text=temp, font=("Calibri", 36))
+h_templabel = maincanvas.create_text(750,170,text="High", font=("Calibri", 20))
+h_tempdisplay = maincanvas.create_text(750,230,text=temp_high, font=("Calibri", 36))
+l_templabel = maincanvas.create_text(600,170,text="Low", font=("Calibri", 20))
+l_tempdisplay = maincanvas.create_text(600,230,text=temp_low, font=("Calibri", 36))
+maincanvas.create_text(800,75,text="("+str(sugarland_weather['coord']['lat'])+"°, "+str(sugarland_weather['coord']['lon'])+"°)", font=("Calibri", 10))
 maincanvas.pack()
+# Metric/Imperial Unit Button
+alternateUnit = "C"
+CButton = tk.LabelFrame(maincanvas,cursor="hand2",bg="#E9ede9",relief="flat")
+CButton.place(x=225,y=75)
+FahrenLabel = tk.Label(CButton,height=1,width=5,text="°F",font=('Calibri',12),bg="#E9ede9")
+CelsiusLabel = tk.Label(CButton,height=1,width=5,text="°C",font=('Calibri',12),bg="#E9ede9")
+CelsiusLabel.pack()
+CelsiusLabel.bind("<ButtonRelease>",switchDegreesUnit)
+FahrenLabel.bind("<ButtonRelease>",switchDegreesUnit)
 # Suggestions box
 suggestions_box = Listbox(root, width=48,height=1,cursor="hand2", font=('Calibri',15), relief="raised", bg="#E9ede9",bd=0)
 suggestions_box.bind("<<ListboxSelect>>",listSelect)
