@@ -1,5 +1,6 @@
 from pprint import pprint
 import requests
+import datetime
 import json
 import tkinter as tk
 from tkinter import *#filedialog, Text, messagebox, simpledialog, Entry
@@ -8,9 +9,9 @@ from tkinter import *#filedialog, Text, messagebox, simpledialog, Entry
 root = tk.Tk()
 root.title("UbiWeather - Weather Anywhere and Everywhere")
 root.iconbitmap('weather icons/weather_app_icon.ico')
-root.geometry("1050x900")
-root.maxsize(height=1150,width=1050)
-root.minsize(height=900,width=1050)
+root.geometry("750x642")
+root.maxsize(height=642,width=750)
+root.minsize(height=642,width=750)
 
 def resizeWindow(e):
     global searchButtonx, button_location
@@ -30,6 +31,12 @@ root.bind('<Configure>', resizeWindow)
 def getPolygonPoints(x1, y1, x2, y2, r=25, **kwargs): # credit goes to users SneakyTurtle and tobias_k on https://stackoverflow.com/questions/44099594/how-to-make-a-tkinter-canvas-rectangle-with-rounded-corners
             points = (x1+r, y1, x1+r, y1, x2-r, y1, x2-r, y1, x2, y1, x2, y1+r, x2, y1+r, x2, y2-r, x2, y2-r, x2, y2, x2-r, y2, x2-r, y2, x1+r, y2, x1+r, y2, x1, y2, x1, y2-r, x1, y2-r, x1, y1+r, x1, y1+r, x1, y1)
             return points
+
+def containsNumbers(string):
+        for char in string:
+            if char.isdigit():
+                return TRUE
+        return FALSE
 
 # function will take in current entered value from search box and return a list of suggested values
 def searchSuggestions(e):
@@ -51,7 +58,7 @@ def readBar(e):
         suggestions_box.place_forget()
     else:
         print("Search bar: "+searchBar.get())
-        suggestions_box.place(x=204,y=174)
+        suggestions_box.place(x=54,y=174)
         # Display what is being typed
         suggestions_box.insert(0, searchBar.get())
         # check if there are any suggestions
@@ -80,14 +87,72 @@ def switchDegreesUnit(e):
         temp_high = str(round((htemp_value-32)*.5556))+"°"+alternateUnit
         temp_low = str(round((ltemp_value-32)*.5556))+"°"+alternateUnit
         alternateUnit = "F"
-    c_tempdisplay = maincanvas.create_text(450,230,text=temp, font=("Calibri", 36))
-    h_tempdisplay = maincanvas.create_text(750,230,text=temp_high, font=("Calibri", 36))
-    l_tempdisplay = maincanvas.create_text(600,230,text=temp_low, font=("Calibri", 36))
+    c_tempdisplay = maincanvas.create_text(310,180,text=temp, font=("Calibri", 36))
+    h_tempdisplay = maincanvas.create_text(460,180,text=temp_high, font=("Calibri", 36))
+    l_tempdisplay = maincanvas.create_text(610,180,text=temp_low, font=("Calibri", 36))
 
-def displayData(e, num_descr, _data):
+def displayForecast(e, _lat, _lon):
+    week_days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thu', 'Fri', 'Sat']
+    current_day = datetime.datetime.now().strftime('%a')
+    print("Current day = " + str(current_day))
+    day_pos = -1 # variable used to store position of current day in week_days array
+    for day in week_days:
+        day_pos = day_pos + 1
+        if day == current_day:
+            break
+    upcoming_days = []
+    this_week_days = []
+    next_week_days = []
+    index = -1
+    for day in week_days:
+        index = index + 1
+        if index < day_pos:
+            next_week_days.insert(index,day)
+        elif index > day_pos:
+            this_week_days.insert(index,day)
+    upcoming_days = this_week_days + next_week_days
+    print("received param1 = "+str(_lat)+"\nreceived param2 = "+str(_lon))
+    print(upcoming_days)
+    city_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da&units=imperial".format(_lat,_lon)
+    city_forecast = requests.get(city_forecast_url).json()
+    pprint(city_forecast)
+    index = 1
+    x1 = 60
+    x2 = 160
+    maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
+    maincanvas.create_text(85,391,text=str(round(city_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
+    maincanvas.create_text(125,391,text=str(round(city_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+    forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(city_forecast['daily'][index]['weather'][0]['icon']))
+    forecast_IconImage = forecast_IconImage.subsample(2,2)
+    icon_label = Label(image=forecast_IconImage)
+    icon_label.image = forecast_IconImage
+    #print(sugarland_forecast['daily'][index]['weather'][0]['icon'])
+    maincanvas.create_image(110,340,image=forecast_IconImage)
+    maincanvas.create_text(110,286,text=upcoming_days[0], font=("Calibri", 18))
+    for each_day in upcoming_days:
+        if index == 1:
+            index = index + 1
+            continue
+        index = index + 1
+        x1 = x1 + 106
+        x2 = x2 + 106
+        maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
+        maincanvas.create_text((x1+x2)/2-25,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
+        maincanvas.create_text((x1+x2)/2+15,391,text=str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+        forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_forecast['daily'][index]['weather'][0]['icon']))
+        forecast_IconImage = forecast_IconImage.subsample(2,2)
+        icon_label = Label(image=forecast_IconImage)
+        icon_label.image = forecast_IconImage
+        #print(sugarland_forecast['daily'][index]['weather'][0]['icon'])
+        maincanvas.create_image((x1+x2)/2,340,image=icon_label.image)
+        maincanvas.create_text((x1+x2)/2,286,text=each_day, font=("Calibri", 18))
+    
+def displayData(e, _data):
     maincanvas.pack_forget()
-    description = _data[0][0]
-    icon = _data[1][0]
+    global c_tempdisplay, h_tempdisplay, l_tempdisplay
+    maincanvas.delete(c_tempdisplay)
+    maincanvas.delete(h_tempdisplay)
+    maincanvas.delete(l_tempdisplay)
     global temp, temp_high, temp_low
     _city = _data[2]
     _location = _data[3]
@@ -95,58 +160,87 @@ def displayData(e, num_descr, _data):
         temp += 'C'
         temp_high += "C"
         temp_low += "C"
+        FahrenLabel.pack()
     else:
         temp += "F"
         temp_high += "F"
         temp_low += "F"
-    weatherIcon = PhotoImage(file="weather icons/{}.png".format(icon))
+        CelsiusLabel.pack()
+    DegreesButton.place(x=175,y=230)
+    RefreshButton.place(x=125,y=230)
+    RefreshLabel.pack()
+    weatherIcon = PhotoImage(file="weather icons/{}.png".format(_data[1]))
     weatherIconLabel = Label(image=weatherIcon)
     weatherIconLabel.image = weatherIcon
-    if num_descr == 1:
-        maincanvas.create_polygon(getPolygonPoints(150, 45, 900, 650,r=100),fill="#E9ede9",smooth=True)
-        maincanvas.create_text(525,100,text=_city, font=("Calibri", 28))
-        maincanvas.create_image(300,200,image=weatherIcon)
-        maincanvas.create_text(450,170,text="Current", font=("Calibri", 20))
-        maincanvas.create_text(450,230,text=temp, font=("Calibri", 36))
-        maincanvas.create_text(750,170,text="High", font=("Calibri", 20))
-        maincanvas.create_text(750,230,text=temp_high, font=("Calibri", 36))
-        maincanvas.create_text(600,170,text="Low", font=("Calibri", 20))
-        maincanvas.create_text(600,230,text=temp_low, font=("Calibri", 36))
-        maincanvas.create_text(800,75,text=_location, font=("Calibri", 10))
-        maincanvas.pack()
-    elif num_descr == 2:
-        description2 = _data[0][1]
-        icon2 = _data[1][1]
-        maincanvas.create_polygon(getPolygonPoints(50, 50, 500, 650,r=100),fill="#E9ede9",smooth=True)
-        maincanvas.create_polygon(getPolygonPoints(550, 50, 1000, 650,r=100),fill="#E9ede9",smooth=True)
-        maincanvas.pack()
-    else:
-        print("Unexpected error; Invalid values received")
-        return
+    maincanvas.create_polygon(getPolygonPoints(50, 20, 700, 442,r=100),fill="#d0d1d9",smooth=True)
+    maincanvas.create_text(365,60,text=_city, font=("Calibri", 28))
+    maincanvas.create_image(165,150,image=weatherIcon)
+    maincanvas.create_text(310,120,text="Current", font=("Calibri", 18))
+    c_tempdisplay = maincanvas.create_text(310,180,text=temp, font=("Calibri", 36))
+    maincanvas.create_text(460,120,text="High", font=("Calibri", 18))
+    h_tempdisplay = maincanvas.create_text(460,180,text=temp_high, font=("Calibri", 36))
+    maincanvas.create_text(610,120,text="Low", font=("Calibri", 18))
+    l_tempdisplay = maincanvas.create_text(610,180,text=temp_low, font=("Calibri", 36))
+    maincanvas.create_text(600,35,text=_location, font=("Calibri", 10))
+    maincanvas.create_text(450,230,text=_data[0],font=("Calibri", 24), fill="white")
+    maincanvas.pack()
     
 def searchCity(e):
-    city_entered = searchBar.get();
+    global city_entered, refreshed
+    print("refreshed == "+str(refreshed))
+    if not refreshed:
+        city_entered = searchBar.get();
+    else:
+        refreshed = FALSE
     if city_entered == '':
         return
+    if refreshed:
+        print("Page refreshed.")
     suggestions_box.place_forget()
     searchBar.delete(0,END)
     maincanvas.delete("all")
-    print("Searching for "+city_entered+"...")
+    global alternateUnit
+    if alternateUnit == "C":
+        CelsiusLabel.pack_forget()
+    else:
+        FahrenLabel.pack_forget()
+    DegreesButton.place_forget()
+    RefreshLabel.pack_forget()
+    RefreshButton.place_forget()
+
+    print("Attempting to search for "+city_entered+"...")
+    if containsNumbers(city_entered): # Makes sure that the entered city name does not have any numbers in it
+        print("Invalid city name")
+        NoResults = maincanvas.create_text(375,105,justify='center',text="City not found.\nMake sure you only enter the city's name.\n(e.g. Abu Dhabi)", font=("Calibri", 18))
+        return
+
     url = "http://api.openweathermap.org/data/2.5/weather?q={}&appid=233fb10f061739fe6ced65c5f60ec5da".format(city_entered)
+    weekly_forecast_url = "http://api.openweathermap.org/data/2.5/forecast/daily?q={}&cnt=7&appid=".format(city_entered)
     try:
         weather_data = requests.get(url).json()
         country_code = weather_data["sys"]["country"]
     except KeyError as InvalidCity:
         print("Invalid city name")
-        NoResults = maincanvas.create_text(525,105,justify='center',text="City not found.\nMake sure you only enter the city's name.\n(e.g. Abu Dhabi)", font=("Calibri", 18))
+        NoResults = maincanvas.create_text(375,105,justify='center',text="City not found.\nMake sure you only enter the city's name.\n(e.g. Abu Dhabi)", font=("Calibri", 18))
         return
     is_metric = TRUE
     if country_code == "US" or country_code == "LR" or country_code == "MM":
         url+="&units=imperial"
+        weekly_forecast_url+="&units=imperial"
         is_metric = FALSE
+        alternateUnit = "C"
     else:
         url+="&units=metric"
+        weekly_forecast_url+="&units=metric"
+        alternateUnit = "F"
     weather_data = requests.get(url).json()
+    weekly_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da".format(weather_data['coord']['lat'], weather_data['coord']['lon'])
+    if is_metric:
+        weekly_forecast_url+="&units=metric"
+    else:
+        weekly_forecast_url+="&units=imperial"
+    forecast_data = requests.get(weekly_forecast_url).json()
+    #pprint(forecast_data)
     # get all key weather info and create empty lists for storing weather descriptions and their respective weather icons (this is for cases where there may be more than one weather description)
     city = weather_data['name']+", "+countrycodes[country_code]
     location = "("+str(weather_data['coord']['lat'])+"°, "+str(weather_data['coord']['lon'])+"°)"
@@ -155,18 +249,20 @@ def searchCity(e):
     temp_high = str(round(weather_data['main']['temp_max']))+"°"
     temp_low = str(round(weather_data['main']['temp_min']))+"°"
     weather = weather_data['weather']
-    weather_descriptions = []
-    weather_icons = []
-    num_descriptions = 0
-    for data in weather:
-        weather_descriptions.append(data['description'])
-        weather_icons.append(data['icon'])
-        num_descriptions+=1
-    print(weather_descriptions)
-    print(weather_icons)
+    weather_description = weather_data['weather'][0]['description']
+    weather_icon = weather_data['weather'][0]['icon']
     pprint(weather_data)
-    data_to_display = [weather_descriptions,weather_icons,city,location,is_metric]
-    displayData(e, num_descriptions, data_to_display)
+    data_to_display = [weather_description,weather_icon,city,location,is_metric]
+    displayData(e, data_to_display)
+    print("param1 = "+str(weather_data['coord']['lat'])+"\nparam2 = "+str(weather_data['coord']['lon']))
+    displayForecast(e, weather_data['coord']['lat'], weather_data['coord']['lon'])
+
+refreshed = False # global variable that checks if user refreshed page
+def refresh(e):
+    global refreshed
+    refreshed = TRUE
+    print("Refreshing page...")
+    searchCity(e)
 
 def listSelect(e):
     selectedlistEntry = suggestions_box.get(suggestions_box.curselection())
@@ -175,17 +271,19 @@ def listSelect(e):
     searchBar.delete(0,END)
     searchBar.insert(0,selectedlistEntry)
     suggestions_box.delete(0,END)
+    suggestions_box.place_forget()
 
 _json = open("data/countrycodes.json","r") #countrycodes is a json I created utilizing the data from https://pkgstore.datahub.io/core/country-list/data_json/data/8c458f2d15d9f2119654b29ede6e45b8/data_json.json
 countrycodes = json.loads(_json.read())
 # Title canvas and frame around search bar
 searchBorder = tk.Frame(root, bg="#F6f7f6",bd=-2)
 searchBorder.place(relwidth = 1,relheight=0.5)
-topcanvas = tk.Canvas(root, height = 110, width = 2555, bg = "#7bdaeb",bd=-2)
-AppTitle = topcanvas.create_text(525,55,text="UbiWeather", font=("Calibri", 42))
+topcanvas = tk.Canvas(root, height = 110, width = 2555, bg = "#F6f7f6",bd=-2)
+topcanvas.create_polygon(getPolygonPoints(50, 10, 700, 110,r=120),fill="#c3dfe0",smooth=True)
+AppTitle = topcanvas.create_text(400,60,text="UbiWeather", font=("Calibri", 42))
 AppIconImage = PhotoImage(file="weather icons/weather_app_icon.png")
 AppIconImage = AppIconImage.subsample(2,2)
-AppIcon = topcanvas.create_image(335,55,image=AppIconImage)
+AppIcon = topcanvas.create_image(200,60,image=AppIconImage)
 topcanvas.pack()
 # Search bar and small margin above it
 searchBarTopMargin = tk.Canvas(root, height = 20, width = 2555, bg = "#F6f7f6",bd=-2)
@@ -194,35 +292,98 @@ searchBar = Entry(root, width=40, justify=LEFT, relief="ridge",font= ('Calibri',
 searchBar.pack(pady=0.5)
 searchBar.bind("<KeyRelease>", readBar)
 # Search Button
+city_entered = ""
 searchButton = tk.Button(root, height=1,width=15,relief="flat",font=('Calibri',15),text="Search", cursor="hand2", bg="#Bec0be")
-searchButton.place(x=686,y=132)
+searchButton.place(x=536,y=132)
 button_location = 1010
-searchButtonx = 686
+searchButtonx = 536
 searchButton.bind("<ButtonRelease>", searchCity)
 # Main canvas
 maincanvas = tk.Canvas(root, height = 1050, width = 2555, bg = "#F6f7f6",bd=-2)
-maincanvas.create_polygon(getPolygonPoints(150, 45, 900, 650,r=100),fill="#E9ede9",smooth=True)
-maincanvas.create_text(525,100,text="Sugar Land, United States", font=("Calibri", 28))
+maincanvas.create_polygon(getPolygonPoints(50, 20, 700, 442,r=100),fill="#d0d1d9",smooth=True)
+city_entered = "Sugar Land, United States"
+maincanvas.create_text(365,60,text=city_entered, font=("Calibri", 28))
 sugarland_weather = requests.get("http://api.openweathermap.org/data/2.5/weather?q=Sugar+Land&appid=233fb10f061739fe6ced65c5f60ec5da&units=imperial").json()
 sl_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_weather['weather'][0]['icon']))
+#sl_IconImage = sl_IconImage.subsample(2,2)
 temp = str(round(sugarland_weather['main']['temp']))+"°F"
 temp_high = str(round(sugarland_weather['main']['temp_max']))+"°F"
 temp_low = str(round(sugarland_weather['main']['temp_min']))+"°F"
-maincanvas.create_image(300,200,image=sl_IconImage)
-c_templabel = maincanvas.create_text(450,170,text="Current", font=("Calibri", 20))
-c_tempdisplay = maincanvas.create_text(450,230,text=temp, font=("Calibri", 36))
-h_templabel = maincanvas.create_text(750,170,text="High", font=("Calibri", 20))
-h_tempdisplay = maincanvas.create_text(750,230,text=temp_high, font=("Calibri", 36))
-l_templabel = maincanvas.create_text(600,170,text="Low", font=("Calibri", 20))
-l_tempdisplay = maincanvas.create_text(600,230,text=temp_low, font=("Calibri", 36))
-maincanvas.create_text(800,75,text="("+str(sugarland_weather['coord']['lat'])+"°, "+str(sugarland_weather['coord']['lon'])+"°)", font=("Calibri", 10))
+maincanvas.create_image(165,150,image=sl_IconImage)
+c_templabel = maincanvas.create_text(310,120,text="Current", font=("Calibri", 18))
+c_tempdisplay = maincanvas.create_text(310,180,text=temp, font=("Calibri", 36))
+h_templabel = maincanvas.create_text(460,120,text="High", font=("Calibri", 18))
+h_tempdisplay = maincanvas.create_text(460,180,text=temp_high, font=("Calibri", 36))
+l_templabel = maincanvas.create_text(610,120,text="Low", font=("Calibri", 18))
+l_tempdisplay = maincanvas.create_text(610,180,text=temp_low, font=("Calibri", 36))
+maincanvas.create_text(600,35,text="("+str(sugarland_weather['coord']['lat'])+"°, "+str(sugarland_weather['coord']['lon'])+"°)", font=("Calibri", 10))
+maincanvas.create_text(450,230,text=sugarland_weather['weather'][0]['description'],font=("Calibri", 24), fill="white")
 maincanvas.pack()
+# Upcoming Forecast
+week_days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thu', 'Fri', 'Sat']
+current_day = datetime.datetime.now().strftime('%a')
+print("Current day = " + str(current_day))
+day_pos = -1 # variable used to store position of current day in week_days array
+for day in week_days:
+    day_pos = day_pos + 1
+    if day == current_day:
+        break
+upcoming_days = []
+this_week_days = []
+next_week_days = []
+index = -1
+for day in week_days:
+    index = index + 1
+    if index < day_pos:
+        next_week_days.insert(index,day)
+    elif index > day_pos:
+        this_week_days.insert(index,day)
+upcoming_days = this_week_days + next_week_days
+print(upcoming_days)
+sugarland_forecast = requests.get("https://api.openweathermap.org/data/2.5/onecall?lat=29.6197&lon=-95.6349&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da&units=imperial").json()
+#pprint(sugarland_forecast)
+index = 1
+x1 = 60
+x2 = 160
+maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
+maincanvas.create_text(85,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
+maincanvas.create_text(125,391,text=str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_forecast['daily'][index]['weather'][0]['icon']))
+forecast_IconImage = forecast_IconImage.subsample(2,2)
+icon_label = Label(image=forecast_IconImage)
+icon_label.image = forecast_IconImage
+#print(sugarland_forecast['daily'][index]['weather'][0]['icon'])
+maincanvas.create_image(110,340,image=forecast_IconImage)
+maincanvas.create_text(110,286,text=upcoming_days[0], font=("Calibri", 18))
+for each_day in upcoming_days:
+    if index == 1:
+        index = index + 1
+        continue
+    index = index + 1
+    x1 = x1 + 106
+    x2 = x2 + 106
+    maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
+    maincanvas.create_text((x1+x2)/2-25,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
+    maincanvas.create_text((x1+x2)/2+15,391,text=str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+    forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_forecast['daily'][index]['weather'][0]['icon']))
+    forecast_IconImage = forecast_IconImage.subsample(2,2)
+    icon_label = Label(image=forecast_IconImage)
+    icon_label.image = forecast_IconImage
+    #print(sugarland_forecast['daily'][index]['weather'][0]['icon'])
+    maincanvas.create_image((x1+x2)/2,340,image=icon_label.image)
+    maincanvas.create_text((x1+x2)/2,286,text=each_day, font=("Calibri", 18))
+# Refresh Button
+RefreshButton = tk.LabelFrame(maincanvas,cursor="hand2",bg="#d0d1d9",relief="flat")
+RefreshButton.place(x=125,y=230)
+RefreshLabel = tk.Label(RefreshButton,height=1,width=5,text="Reload",font=('Calibri',11),bg="#d0d1d9")
+RefreshLabel.pack()
+RefreshLabel.bind("<ButtonRelease>",refresh)
 # Metric/Imperial Unit Button
 alternateUnit = "C"
-CButton = tk.LabelFrame(maincanvas,cursor="hand2",bg="#E9ede9",relief="flat")
-CButton.place(x=225,y=75)
-FahrenLabel = tk.Label(CButton,height=1,width=5,text="°F",font=('Calibri',12),bg="#E9ede9")
-CelsiusLabel = tk.Label(CButton,height=1,width=5,text="°C",font=('Calibri',12),bg="#E9ede9")
+DegreesButton = tk.LabelFrame(maincanvas,cursor="hand2",bg="#d0d1d9",relief="flat")
+DegreesButton.place(x=175,y=230)
+FahrenLabel = tk.Label(DegreesButton,height=1,width=5,text="°F",font=('Calibri',11),bg="#d0d1d9")
+CelsiusLabel = tk.Label(DegreesButton,height=1,width=5,text="°C",font=('Calibri',11),bg="#d0d1d9")
 CelsiusLabel.pack()
 CelsiusLabel.bind("<ButtonRelease>",switchDegreesUnit)
 FahrenLabel.bind("<ButtonRelease>",switchDegreesUnit)
