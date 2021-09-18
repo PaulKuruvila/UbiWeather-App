@@ -65,20 +65,34 @@ def readBar(e):
         #if :
 
 def switchDegreesUnit(e):
-    global alternateUnit, temp, temp_high, temp_low, c_tempdisplay, h_tempdisplay, l_tempdisplay
+    global alternateUnit, temp, temp_high, temp_low, c_tempdisplay, h_tempdisplay, l_tempdisplay, forecast_temps, forecast_display
     print("altUnit value = "+alternateUnit)
     maincanvas.delete(c_tempdisplay)
     maincanvas.delete(h_tempdisplay)
     maincanvas.delete(l_tempdisplay)
+    for each_label in forecast_display:
+        maincanvas.delete(each_label)
+    forecast_display = []
     temp_value = int(temp[0:len(temp)-2])
     htemp_value = int(temp_high[0:len(temp_high)-2])
     ltemp_value = int(temp_low[0:len(temp_low)-2])
+    index = 0
+    x1 = 60
+    x2 = 160
     if alternateUnit == "F":
         FahrenLabel.pack_forget()
         CelsiusLabel.pack()
         temp = str(round((temp_value*1.8)+32))+"°"+alternateUnit
         temp_high = str(round((htemp_value*1.8)+32))+"°"+alternateUnit
         temp_low = str(round((ltemp_value*1.8)+32))+"°"+alternateUnit
+        while index < 11:
+            forecast_temps[index] = round((forecast_temps[index]*1.8)+32)
+            forecast_temps[index+1] = round((forecast_temps[index+1]*1.8)+32)
+            templabel = maincanvas.create_text((x1+x2)/2,391,text=str(forecast_temps[index])+"/"+str(forecast_temps[index+1])+"°F", font=("Calibri", 18))
+            forecast_display.append(templabel)
+            x1 = x1 + 106
+            x2 = x2 + 106
+            index = index + 2
         alternateUnit = "C"
     else:
         CelsiusLabel.pack_forget()
@@ -86,12 +100,26 @@ def switchDegreesUnit(e):
         temp = str(round((temp_value-32)*.5556))+"°"+alternateUnit
         temp_high = str(round((htemp_value-32)*.5556))+"°"+alternateUnit
         temp_low = str(round((ltemp_value-32)*.5556))+"°"+alternateUnit
+        while index < 11:
+            forecast_temps[index] = round((forecast_temps[index]-32)*.5556)
+            forecast_temps[index+1] = round((forecast_temps[index+1]-32)*.5556)
+            templabel = maincanvas.create_text((x1+x2)/2,391,text=str(forecast_temps[index])+"/"+str(forecast_temps[index+1])+"°C", font=("Calibri", 18))
+            forecast_display.append(templabel)
+            x1 = x1 + 106
+            x2 = x2 + 106
+            index = index + 2
         alternateUnit = "F"
+        #print(forecast_temps)
     c_tempdisplay = maincanvas.create_text(310,180,text=temp, font=("Calibri", 36))
     h_tempdisplay = maincanvas.create_text(460,180,text=temp_high, font=("Calibri", 36))
     l_tempdisplay = maincanvas.create_text(610,180,text=temp_low, font=("Calibri", 36))
 
-def displayForecast(e, _lat, _lon):
+
+def displayForecast(e, _lat, _lon, unit_metric):
+    global forecast_display, forecast_temps
+    for each_label in forecast_display:
+        maincanvas.delete(each_label)
+    forecast_display = []
     week_days = ['Sun', 'Mon', 'Tues', 'Wed', 'Thu', 'Fri', 'Sat']
     current_day = datetime.datetime.now().strftime('%a')
     print("Current day = " + str(current_day))
@@ -111,17 +139,22 @@ def displayForecast(e, _lat, _lon):
         elif index > day_pos:
             this_week_days.insert(index,day)
     upcoming_days = this_week_days + next_week_days
-    print("received param1 = "+str(_lat)+"\nreceived param2 = "+str(_lon))
-    print(upcoming_days)
-    city_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da&units=imperial".format(_lat,_lon)
+    #print(upcoming_days)
+    specified_unit = 'metric'
+    unit_symbol = 'C'
+    if(not unit_metric):
+        specified_unit = 'imperial'
+        unit_symbol = 'F'
+    city_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da&units={}".format(_lat,_lon,specified_unit)
     city_forecast = requests.get(city_forecast_url).json()
     pprint(city_forecast)
     index = 1
     x1 = 60
     x2 = 160
     maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
-    maincanvas.create_text(85,391,text=str(round(city_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
-    maincanvas.create_text(125,391,text=str(round(city_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+    templabel = maincanvas.create_text(110,391,text=str(round(city_forecast['daily'][index]['temp']['max']))+"/"+str(round(city_forecast['daily'][index]['temp']['min']))+"°"+unit_symbol, font=("Calibri", 18))
+    forecast_temps = [round(city_forecast['daily'][index]['temp']['max']), round(city_forecast['daily'][index]['temp']['min'])]
+    forecast_display.append(templabel)
     forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(city_forecast['daily'][index]['weather'][0]['icon']))
     forecast_IconImage = forecast_IconImage.subsample(2,2)
     icon_label = Label(image=forecast_IconImage)
@@ -137,13 +170,14 @@ def displayForecast(e, _lat, _lon):
         x1 = x1 + 106
         x2 = x2 + 106
         maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
-        maincanvas.create_text((x1+x2)/2-25,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
-        maincanvas.create_text((x1+x2)/2+15,391,text=str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
-        forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_forecast['daily'][index]['weather'][0]['icon']))
+        templabel = maincanvas.create_text((x1+x2)/2,391,text=str(round(city_forecast['daily'][index]['temp']['max']))+"/"+str(round(city_forecast['daily'][index]['temp']['min']))+"°"+unit_symbol, font=("Calibri", 18))
+        forecast_temps.append(round(city_forecast['daily'][index]['temp']['max']))
+        forecast_temps.append(round(city_forecast['daily'][index]['temp']['min']))
+        forecast_display.append(templabel)
+        forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(city_forecast['daily'][index]['weather'][0]['icon']))
         forecast_IconImage = forecast_IconImage.subsample(2,2)
         icon_label = Label(image=forecast_IconImage)
         icon_label.image = forecast_IconImage
-        #print(sugarland_forecast['daily'][index]['weather'][0]['icon'])
         maincanvas.create_image((x1+x2)/2,340,image=icon_label.image)
         maincanvas.create_text((x1+x2)/2,286,text=each_day, font=("Calibri", 18))
     
@@ -254,8 +288,7 @@ def searchCity(e):
     pprint(weather_data)
     data_to_display = [weather_description,weather_icon,city,location,is_metric]
     displayData(e, data_to_display)
-    print("param1 = "+str(weather_data['coord']['lat'])+"\nparam2 = "+str(weather_data['coord']['lon']))
-    displayForecast(e, weather_data['coord']['lat'], weather_data['coord']['lon'])
+    displayForecast(e, weather_data['coord']['lat'], weather_data['coord']['lon'], is_metric)
 
 refreshed = False # global variable that checks if user refreshed page
 def refresh(e):
@@ -345,9 +378,11 @@ sugarland_forecast = requests.get("https://api.openweathermap.org/data/2.5/oneca
 index = 1
 x1 = 60
 x2 = 160
+forecast_temps = [round(sugarland_forecast['daily'][index]['temp']['max']), round(sugarland_forecast['daily'][index]['temp']['min'])] # array that stores max/min temps for the 6 day forecast, so that the temps can be altered by the switchDegrees function
+forecast_display = []
 maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
-maincanvas.create_text(85,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
-maincanvas.create_text(125,391,text=str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+templabel = maincanvas.create_text(110,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/"+str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+forecast_display.append(templabel)
 forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_forecast['daily'][index]['weather'][0]['icon']))
 forecast_IconImage = forecast_IconImage.subsample(2,2)
 icon_label = Label(image=forecast_IconImage)
@@ -363,8 +398,10 @@ for each_day in upcoming_days:
     x1 = x1 + 106
     x2 = x2 + 106
     maincanvas.create_polygon(getPolygonPoints(x1, 265, x2, 427,r=100),fill="#bebecf",smooth=True)
-    maincanvas.create_text((x1+x2)/2-25,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/", font=("Calibri", 18))
-    maincanvas.create_text((x1+x2)/2+15,391,text=str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+    templabel = maincanvas.create_text((x1+x2)/2,391,text=str(round(sugarland_forecast['daily'][index]['temp']['max']))+"/"+str(round(sugarland_forecast['daily'][index]['temp']['min']))+"°F", font=("Calibri", 18))
+    forecast_display.append(templabel)
+    forecast_temps.append(round(sugarland_forecast['daily'][index]['temp']['max']))
+    forecast_temps.append(round(sugarland_forecast['daily'][index]['temp']['min']))
     forecast_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_forecast['daily'][index]['weather'][0]['icon']))
     forecast_IconImage = forecast_IconImage.subsample(2,2)
     icon_label = Label(image=forecast_IconImage)
@@ -372,6 +409,7 @@ for each_day in upcoming_days:
     #print(sugarland_forecast['daily'][index]['weather'][0]['icon'])
     maincanvas.create_image((x1+x2)/2,340,image=icon_label.image)
     maincanvas.create_text((x1+x2)/2,286,text=each_day, font=("Calibri", 18))
+#print(forecast_temps)
 # Refresh Button
 RefreshButton = tk.LabelFrame(maincanvas,cursor="hand2",bg="#d0d1d9",relief="flat")
 RefreshButton.place(x=125,y=230)
