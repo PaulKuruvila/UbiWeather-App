@@ -5,7 +5,7 @@ Weather app written in **Python** that utilizes **Tkinter**, Python's standard G
 ## sample.env
 ***---Please rename this file to ".env"!!---***
 
-You can generate your own OpenWeatherMap API key here: https://openweathermap.org/api
+You can generate your own OpenWeatherMap API key here: https://openweathermap.org/home/sign_up
 
 Please replace "**YOUR_API_KEY_HERE**" below with your generated OpenWeatherMap API key.
 
