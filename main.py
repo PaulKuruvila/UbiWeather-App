@@ -3,8 +3,9 @@ import requests
 import datetime
 import json
 import tkinter as tk
-from tkinter import *#filedialog, Text, messagebox, simpledialog, Entry
-#import os
+from tkinter import *
+from dotenv import load_dotenv
+import os
 
 root = tk.Tk()
 root.title("UbiWeather - Weather Anywhere and Everywhere")
@@ -12,6 +13,9 @@ root.iconbitmap('weather icons/weather_app_icon.ico')
 root.geometry("750x642")
 root.maxsize(height=642,width=750)
 root.minsize(height=642,width=750)
+
+load_dotenv()
+API_KEY = os.getenv("API_KEY") 
 
 def resizeWindow(e):
     global searchButtonx, button_location
@@ -145,7 +149,7 @@ def displayForecast(e, _lat, _lon, unit_metric):
     if(not unit_metric):
         specified_unit = 'imperial'
         unit_symbol = 'F'
-    city_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da&units={}".format(_lat,_lon,specified_unit)
+    city_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid={}&units={}".format(_lat,_lon,API_KEY,specified_unit)
     city_forecast = requests.get(city_forecast_url).json()
     pprint(city_forecast)
     index = 1
@@ -248,8 +252,8 @@ def searchCity(e):
         NoResults = maincanvas.create_text(375,105,justify='center',text="City not found.\nMake sure you only enter the city's name.\n(e.g. Abu Dhabi)", font=("Calibri", 18))
         return
 
-    url = "http://api.openweathermap.org/data/2.5/weather?q={}&appid=233fb10f061739fe6ced65c5f60ec5da".format(city_entered)
-    weekly_forecast_url = "http://api.openweathermap.org/data/2.5/forecast/daily?q={}&cnt=7&appid=".format(city_entered)
+    url = "http://api.openweathermap.org/data/2.5/weather?q={}&appid={}".format(city_entered,API_KEY)
+    weekly_forecast_url = "http://api.openweathermap.org/data/2.5/forecast/daily?q={}&cnt=7&appid={}".format(city_entered,API_KEY)
     try:
         weather_data = requests.get(url).json()
         country_code = weather_data["sys"]["country"]
@@ -268,7 +272,7 @@ def searchCity(e):
         weekly_forecast_url+="&units=metric"
         alternateUnit = "F"
     weather_data = requests.get(url).json()
-    weekly_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da".format(weather_data['coord']['lat'], weather_data['coord']['lon'])
+    weekly_forecast_url = "https://api.openweathermap.org/data/2.5/onecall?lat={}&lon={}&exclude=current,minutely,hourly,alerts&appid={}".format(weather_data['coord']['lat'], weather_data['coord']['lon'],API_KEY)
     if is_metric:
         weekly_forecast_url+="&units=metric"
     else:
@@ -336,7 +340,7 @@ maincanvas = tk.Canvas(root, height = 1050, width = 2555, bg = "#F6f7f6",bd=-2)
 maincanvas.create_polygon(getPolygonPoints(50, 20, 700, 442,r=100),fill="#d0d1d9",smooth=True)
 city_entered = "Sugar Land, United States"
 maincanvas.create_text(365,60,text=city_entered, font=("Calibri", 28))
-sugarland_weather = requests.get("http://api.openweathermap.org/data/2.5/weather?q=Sugar+Land&appid=233fb10f061739fe6ced65c5f60ec5da&units=imperial").json()
+sugarland_weather = requests.get(f"http://api.openweathermap.org/data/2.5/weather?q=Sugar+Land&appid={API_KEY}&units=imperial").json()
 sl_IconImage = PhotoImage(file="weather icons/{}.png".format(sugarland_weather['weather'][0]['icon']))
 #sl_IconImage = sl_IconImage.subsample(2,2)
 temp = str(round(sugarland_weather['main']['temp']))+"°F"
@@ -373,7 +377,7 @@ for day in week_days:
         this_week_days.insert(index,day)
 upcoming_days = this_week_days + next_week_days
 print(upcoming_days)
-sugarland_forecast = requests.get("https://api.openweathermap.org/data/2.5/onecall?lat=29.6197&lon=-95.6349&exclude=current,minutely,hourly,alerts&appid=233fb10f061739fe6ced65c5f60ec5da&units=imperial").json()
+sugarland_forecast = requests.get(f"https://api.openweathermap.org/data/2.5/onecall?lat=29.6197&lon=-95.6349&exclude=current,minutely,hourly,alerts&appid={API_KEY}&units=imperial").json()
 #pprint(sugarland_forecast)
 index = 1
 x1 = 60
